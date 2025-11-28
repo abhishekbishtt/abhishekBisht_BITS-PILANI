@@ -102,6 +102,101 @@ CRITICAL EXTRACTION RULES:
    - "Bill Detail": Contains itemized charges
    - "Final Bill": Contains summary/total page
    - "Pharmacy": Medicine/drug bills
+   Identify the page type based on the STRUCTURE of information:
+
+        **Decision Question:** "Does this page show INDIVIDUAL items with specific names, or only CATEGORY totals?"
+
+        📋 **"Bill Detail"** - Pages showing INDIVIDUAL itemized charges:
+        
+        ✓ Characteristics:
+        - Each row = ONE specific item/medicine/test/procedure
+        - You can see actual item names (e.g., "BLOOD SUGAR BY GLUCOMETER", "X-RAY CHEST", "PARACETAMOL 500MG")
+        - May have dates per item, quantities per item
+        - Has detailed line-by-line breakdown
+        - May have subtotals for categories (e.g., "Investigation Total: 15,020.00")
+        
+        ✓ Example structure:
+            BLOOD SUGAR BY GLUCOMETER | 13/11/25 | 1 No | 80.00 | 73.60
+            X-RAY CHEST | 14/11/25 | 1 No | 500.00 | 460.00
+            LUMBAR PUNCTURE | 17/11/25 | 1 No | 1000.00 | 920.00
+            SYRINGE/INFUSION PUMP | 07/11/25 | 4 No | 1320.00 | 1214.40
+        → Each line is a DIFFERENT specific service/item
+        
+
+        📊 **"Final Bill"** - Pages showing CATEGORY summaries only:
+
+        ✓ Characteristics:
+        - Each row = ONE entire category (e.g., "Consultation", "Equipment", "Pharmacy")
+        - NO specific item names - only category labels
+        - NO dates per item, NO individual quantities
+        - Shows aggregated/consolidated amounts per category
+        - Usually has payment details, grand totals, "Total Payable Amount"
+        - Categories are broad service types, not specific items
+
+        ✓ Example structure:
+            Consultation | 79,750.00
+            Equipment | 213,250.00
+            Investigations | 173,010.00
+            Pharmacy Consumables | 334,504.78
+            Room Rent | 235,800.00
+            Total Payable Amount | 2,209,763.00
+        → Each line is a CATEGORY total, not an individual item
+
+        💊 **"Pharmacy"** - Pages showing ONLY medicines/drugs with pharmacy-specific details:
+
+        ✓ Characteristics:
+        - Shows drug/medicine names with batch numbers and expiry dates
+        - Columns like: Drug Name, Batch No, Exp Date, Qty, MRP
+        - Examples: PARACETAMOL 500MG, INJECTION CEFTRIAXONE, SYRUP AZITHROMYCIN
+
+        ⚠️ CLASSIFICATION LOGIC - Follow this decision tree:
+
+        Step 1: Look at the first 3-5 rows of data
+        Step 2: Ask: "Are these specific item names or just category labels?"
+        - If you see "BLOOD SUGAR TEST", "MRI SCAN", "PARACETAMOL" → Specific items → "Bill Detail"
+        - If you see "Consultation", "Equipment", "Investigations" → Category labels → "Final Bill"
+
+        Step 3: Verify by checking structure:
+        - Many similar items grouped together → "Bill Detail"
+        - Few broad categories with large totals → "Final Bill"
+
+        ⚠️ COMMON MISTAKES TO AVOID:
+
+        ❌ WRONG: Seeing "Consultation | 79,750.00" and classifying as "Bill Detail"
+        → This is a category summary, not an itemized list
+
+        ✓ CORRECT: "Consultation | 79,750.00" → "Final Bill"
+
+        ❌ WRONG: Seeing a page with subtotals and calling it "Final Bill"
+        → If it has individual items BEFORE the subtotal, it's still "Bill Detail"
+
+        ✓ CORRECT: 
+        BLOOD TEST | 80.00
+        X-RAY | 500.00
+        Subtotal | 580.00 
+        ← This page is "Bill Detail" (has individual items)
+
+
+        Examples for Practice:
+
+        Example 1:
+            
+            Service Name | Amount
+            Consultation | 79,750.00
+            Equipment | 213,250.00
+            → page_type = "Final Bill" ✓ (only category names, no specific services)
+
+        Example 2:
+
+            Item Name | Date | Qty | Amount
+            BLOOD SUGAR BY GLUCOMETER | 13/11/25 | 1 | 73.60
+            ADVANCED VENTILATION (BEAR 750) | 07/11/25 | 1 | 2760.00
+        
+            → page_type = "Bill Detail" ✓ (specific item names listed)
+
+     
+
+
 
 OUTPUT FORMAT (JSON):
 {

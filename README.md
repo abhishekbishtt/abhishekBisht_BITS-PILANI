@@ -1,2 +1,14 @@
-# abhishekBisht_BITS-PILANI
-This API takes a  medical bill (PDF or image) and automatically converts it into a clean, structured JSON format
+cat > README.md << 'EOF'
+---
+title: Medical Bill Extraction API
+emoji: 🏥
+colorFrom: blue
+colorTo: green
+sdk: docker
+pinned: false
+---
+
+# Medical Bill Extraction API
+
+FastAPI-based API for extracting line items from medical bills using Google Gemini Vision API.
+EOF

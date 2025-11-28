@@ -1,5 +1,11 @@
 .env
 __pycache__/
 *.pyc
-temp/
-.DS_Store
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/

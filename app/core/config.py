@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+import os
 
 
 class Settings(BaseSettings):
@@ -12,16 +13,16 @@ class Settings(BaseSettings):
     
     # Server Settings
     HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    PORT: int = int(os.getenv("PORT", 7860))  # Changed: Read from env, default 7860 for HF
     
-    # Gemini Configuration - CHANGED from OPENAI
-    GEMINI_API_KEY: str
+    # Gemini Configuration
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")  # Changed: Read from env with default
     GEMINI_MODEL: str = "gemini-2.0-flash-001"
     GEMINI_TEMPERATURE: float = 0.1
     
     # Document Processing Settings
-    MAX_FILE_SIZE_MB: int = 50
-    MAX_PAGES: int = 50
+    MAX_FILE_SIZE_MB: int = 100
+    MAX_PAGES: int = 100
     PDF_DPI: int = 300
     TIMEOUT_SECONDS: int = 60
     

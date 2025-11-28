@@ -6,4 +6,4 @@ pdf2image==1.17.0
 aiohttp==3.10.0
 pydantic-settings==2.6.0
 python-multipart==0.0.12
-poppler-utils
+

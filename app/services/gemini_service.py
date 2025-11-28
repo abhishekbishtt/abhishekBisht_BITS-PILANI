@@ -17,9 +17,8 @@ class GeminiService:
     
     def __init__(self):
         """Initialize Gemini service"""
-        # Following official quickstart: client gets API key from settings
         self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        self.model = "gemini-2.0-flash-001"  # Stable version
+        self.model = "gemini-2.0-flash-001"
         logger.info(f"✓ Gemini Service initialized: {self.model}")
     
     def analyze_page(
@@ -29,25 +28,17 @@ class GeminiService:
     ) -> Dict[str, Any]:
         """
         Analyze a single page image and extract bill items
-        
-        Args:
-            image: PIL Image object
-            page_no: Page number (1-indexed)
-            
-        Returns:
-            Dictionary containing:
-                - page_data: Extracted data dict
-                - token_usage: Token usage dict
-                - error: Error message if failed (None if success)
-                - page_number: Page number
         """
         try:
             logger.info(f"Analyzing page {page_no}...")
             
-            # Following official template: client.models.generate_content()
+            # Add page number to prompt
+            prompt_with_page = f"{EXTRACTION_PROMPT}\n\nIMPORTANT: This is page {page_no}. Set page_no field to \"{page_no}\" in your response."
+            
+            # Generate content
             response = self.client.models.generate_content(
                 model=self.model,
-                contents=[EXTRACTION_PROMPT, image],
+                contents=[prompt_with_page, image],  # CHANGED: use prompt with page number
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
                     temperature=settings.GEMINI_TEMPERATURE,
@@ -56,6 +47,9 @@ class GeminiService:
             
             # Parse response
             result_json = json.loads(response.text)
+            
+            # FORCE CORRECT PAGE NUMBER (override Gemini's response)
+            result_json["page_no"] = str(page_no)  # ADD THIS LINE
             
             # Extract token usage
             usage = response.usage_metadata

@@ -1,3 +1,5 @@
+cd /Users/abhishekbisht/abhishekBisht_BITS-PILANI
+
 cat > README.md << 'EOF'
 ---
 title: Medical Bill Extraction API
@@ -11,4 +13,15 @@ pinned: false
 # Medical Bill Extraction API
 
 FastAPI-based API for extracting line items from medical bills using Google Gemini Vision API.
+
+## Features
+- PDF to image conversion
+- Multi-page bill processing
+- Gemini Vision AI extraction
+- Structured JSON output
+
+## API Endpoint
+POST /extract-bill-data
+
+Built for BITS Pilani hackathon project.
 EOF

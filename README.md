@@ -1,6 +1,3 @@
-cd /Users/abhishekbisht/abhishekBisht_BITS-PILANI
-
-cat > README.md << 'EOF'
 ---
 title: Medical Bill Extraction API
 emoji: 🏥
@@ -24,4 +21,3 @@ FastAPI-based API for extracting line items from medical bills using Google Gemi
 POST /extract-bill-data
 
 Built for BITS Pilani hackathon project.
-EOF

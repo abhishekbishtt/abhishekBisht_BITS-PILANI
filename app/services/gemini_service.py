@@ -1,7 +1,8 @@
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from PIL import Image
 import json
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 import logging
 
 from app.core.config import get_settings
@@ -16,9 +17,10 @@ class GeminiService:
     
     def __init__(self):
         """Initialize Gemini service"""
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        self.model = genai.GenerativeModel(model_name=settings.GEMINI_MODEL)
-        logger.info(f"✓ Gemini Service initialized: {settings.GEMINI_MODEL}")
+        # Following official quickstart: client gets API key from settings
+        self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        self.model = "gemini-2.0-flash-001"  # Stable version
+        logger.info(f"✓ Gemini Service initialized: {self.model}")
     
     def analyze_page(
         self, 
@@ -37,17 +39,19 @@ class GeminiService:
                 - page_data: Extracted data dict
                 - token_usage: Token usage dict
                 - error: Error message if failed (None if success)
+                - page_number: Page number
         """
         try:
             logger.info(f"Analyzing page {page_no}...")
             
-            # Generate content
-            response = self.model.generate_content(
-                [EXTRACTION_PROMPT, image],
-                generation_config={
-                    "response_mime_type": "application/json",
-                    "temperature": settings.GEMINI_TEMPERATURE,
-                }
+            # Following official template: client.models.generate_content()
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=[EXTRACTION_PROMPT, image],
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=settings.GEMINI_TEMPERATURE,
+                )
             )
             
             # Parse response
@@ -74,7 +78,8 @@ class GeminiService:
             return {
                 "page_data": result_json,
                 "token_usage": token_usage,
-                "error": None
+                "error": None,
+                "page_number": page_no
             }
             
         except json.JSONDecodeError as e:
@@ -82,7 +87,8 @@ class GeminiService:
             return {
                 "page_data": None,
                 "token_usage": {"total_tokens": 0, "input_tokens": 0, "output_tokens": 0},
-                "error": f"Invalid JSON response: {str(e)}"
+                "error": f"Invalid JSON response: {str(e)}",
+                "page_number": page_no
             }
             
         except Exception as e:
@@ -90,5 +96,6 @@ class GeminiService:
             return {
                 "page_data": None,
                 "token_usage": {"total_tokens": 0, "input_tokens": 0, "output_tokens": 0},
-                "error": str(e)
+                "error": str(e),
+                "page_number": page_no
             }

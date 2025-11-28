@@ -21,8 +21,11 @@ async def extract_bill_data(request: DocumentRequest):
     - **document**: URL to the document (PDF or image)
     """
     try:
-        return await extraction_service.extract_from_url(request.document)
+        logger.info(f"Processing document: {request.document}")
+        result = await extraction_service.extract_from_url(request.document)
+        logger.info(f"Extraction result: {result}")
         
+        return result
     except HTTPException as e:
         logger.error(f"HTTP error: {e.detail}")
         return JSONResponse(

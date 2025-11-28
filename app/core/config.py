@@ -1,11 +1,11 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
-from typing import Optional
+
 
 class Settings(BaseSettings):
-    """Application settings with validation"""
+    """Application settings"""
     
-    # API Settings
+    # Application Settings
     APP_NAME: str = "Medical Bill Extraction API"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
@@ -14,15 +14,16 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     
-    # AI Service Settings
+    # Gemini Configuration - CHANGED from OPENAI
     GEMINI_API_KEY: str
-    GEMINI_MODEL: str = "gemini-1.5-flash"
+    GEMINI_MODEL: str = "gemini-2.0-flash-001"
     GEMINI_TEMPERATURE: float = 0.1
     
-    # Processing Settings
+    # Document Processing Settings
     MAX_FILE_SIZE_MB: int = 50
+    MAX_PAGES: int = 50
     PDF_DPI: int = 300
-    TIMEOUT_SECONDS: int = 300
+    TIMEOUT_SECONDS: int = 60
     
     # Logging
     LOG_LEVEL: str = "INFO"
@@ -34,5 +35,4 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings() -> Settings:
-    """Get cached settings instance"""
     return Settings()

@@ -6,8 +6,8 @@ class BillItem(BaseModel):
     """Individual line item from a bill"""
     item_name: str = Field(..., description="Name of the item exactly as mentioned in the bill")
     item_amount: float = Field(..., description="Net amount post discounts")
-    item_rate: float = Field(..., description="Rate per unit")
-    item_quantity: float = Field(..., description="Quantity of the item")
+    item_rate: Optional[float] = Field(default=0.0, description="Rate per unit")
+    item_quantity: Optional[float] = Field(default=0.0, description="Quantity of the item")
 
 
 class PageData(BaseModel):

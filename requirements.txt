@@ -6,4 +6,7 @@ pdf2image==1.17.0
 aiohttp==3.10.0
 pydantic-settings==2.6.0
 python-multipart==0.0.12
+langgraph==0.2.12
+langchain-google-genai==1.0.3
+langchain-core==0.2.18
 httpx

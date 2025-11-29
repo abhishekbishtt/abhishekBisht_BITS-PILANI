@@ -152,3 +152,40 @@ class ExtractionService:
                 "data": {},
                 "error": str(e)
             }
+    
+    def filter_breakup_items(self, items: list[BillItem]) -> list[BillItem]:
+        """Universal breakup detection without hardcoding"""
+        filtered = []
+        
+        for item in items:
+            # Rule 1: Zero amount → Skip
+            if item.item_amount == 0:
+                continue
+                
+            # Rule 2: Amount == Rate (single value line) → Keep  
+            if abs(item.item_amount - item.item_rate) < 0.01:
+                filtered.append(item)
+                continue
+                
+            # Rule 3: Contains batch codes (alphanumeric 6-12 chars)
+            if self.has_batch_code(item.item_name):
+                continue
+                
+            # Rule 4: Duplicate names across pages (90% match)
+            if self.is_likely_duplicate(item):
+                continue
+                
+            filtered.append(item)
+        
+        return filtered
+
+    def has_batch_code(self, name: str) -> bool:
+        # Universal batch patterns: ALPHANUM 6-12 chars with letters+numbers
+        import re
+        batch = re.search(r'\b[A-Z0-9]{6,12}\b', name)
+        return bool(batch)
+
+    def is_likely_duplicate(self, item: BillItem, all_items: list) -> bool:
+        # Fuzzy match 90% similarity
+        return False  # Implement later if needed
+        

@@ -2,7 +2,6 @@ from pydantic_settings import BaseSettings
 from functools import lru_cache
 import os
 
-
 class Settings(BaseSettings):
     """Application settings"""
     
@@ -15,8 +14,9 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = int(os.getenv("PORT", 7860))
     
-    # Gemini Configuration
+    # Gemini Configuration - ADD GOOGLE_API_KEY
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")  # ADD THIS LINE
     GEMINI_MODEL: str = "gemini-2.0-flash-001"
     GEMINI_TEMPERATURE: float = 0.1
     
@@ -32,7 +32,6 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
-
 
 @lru_cache()
 def get_settings() -> Settings:

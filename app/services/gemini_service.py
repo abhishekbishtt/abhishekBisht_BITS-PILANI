@@ -41,7 +41,7 @@ class GeminiService:
             prompt = f"{EXTRACTION_PROMPT}\n\nThis is page {page_no} of the bill."
             
             # Call Gemini API
-            response = self.client.models.generate_content(
+            response = await self.client.aio.models.generate_content(
                 model=settings.GEMINI_MODEL,
                 contents=[prompt, image],
                 config=config

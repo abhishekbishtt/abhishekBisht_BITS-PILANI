@@ -1,7 +1,8 @@
 from pdf2image import convert_from_bytes
 from PIL import Image
 import aiohttp
-from typing import List
+from typing import List, Tuple
+import io
 import logging
 
 from app.core.config import get_settings
@@ -11,9 +12,9 @@ settings = get_settings()
 
 
 class DocumentService:
-    """Service for handling document downloads and PDF conversion"""
+    """Service for handling document downloads and processing"""
     
-    async def download_document(self, url: str) -> bytes:
+    async def download_document(self, url: str) -> Tuple[bytes, str]:
         """
         Download document from URL.
         
@@ -21,7 +22,7 @@ class DocumentService:
             url: Document URL
             
         Returns:
-            Document content as bytes
+            Tuple of (content_bytes, content_type)
             
         Raises:
             Exception: If download fails
@@ -34,41 +35,66 @@ class DocumentService:
                         raise Exception(f"Failed to download: HTTP {response.status}")
                     
                     content = await response.read()
-                    logger.info(f"Downloaded {len(content)} bytes")
-                    return content
+                    content_type = response.headers.get('Content-Type', '').lower()
+                    logger.info(f"Downloaded {len(content)} bytes, type: {content_type}")
+                    return content, content_type
                     
         except Exception as e:
             logger.error(f"Download failed: {str(e)}")
             raise
     
-    def convert_pdf_to_images(self, pdf_bytes: bytes) -> List[Image.Image]:
+    def process_document(self, content: bytes, content_type: str) -> List[Image.Image]:
         """
-        Convert PDF bytes to list of PIL Images.
+        Process document content into list of images.
         
         Args:
-            pdf_bytes: PDF file content as bytes
+            content: File content bytes
+            content_type: MIME type of the file
             
         Returns:
-            List of PIL Image objects (one per page)
-            
-        Raises:
-            Exception: If conversion fails
+            List of PIL Image objects
         """
         try:
-            logger.info("Converting PDF to images...")
-            images = convert_from_bytes(
-                pdf_bytes,
-                dpi=settings.PDF_DPI,
-                fmt='png'
-            )
-            logger.info(f"Converted PDF to {len(images)} pages")
+            images = []
+            
+            if 'pdf' in content_type:
+                logger.info("Processing as PDF")
+                images = convert_from_bytes(
+                    content,
+                    dpi=settings.PDF_DPI,
+                    fmt='png'
+                )
+            elif 'image' in content_type:
+                logger.info("Processing as Image")
+                image = Image.open(io.BytesIO(content))
+                # Convert to RGB to handle RGBA/P modes if necessary
+                if image.mode not in ('RGB', 'L'):
+                    image = image.convert('RGB')
+                images = [image]
+            else:
+                # Fallback: try to detect by signature or just try opening as image
+                try:
+                    logger.info("Unknown type, trying as Image")
+                    image = Image.open(io.BytesIO(content))
+                    if image.mode not in ('RGB', 'L'):
+                        image = image.convert('RGB')
+                    images = [image]
+                except Exception:
+                    # Try as PDF if image fails
+                    logger.info("Image open failed, trying as PDF")
+                    try:
+                        images = convert_from_bytes(content, dpi=settings.PDF_DPI, fmt='png')
+                    except Exception:
+                        raise Exception(f"Unsupported file type: {content_type}")
+
+            logger.info(f"Processed document into {len(images)} pages")
             
             if len(images) > settings.MAX_PAGES:
-                logger.warning(f"PDF has {len(images)} pages, limiting to {settings.MAX_PAGES}")
+                logger.warning(f"Document has {len(images)} pages, limiting to {settings.MAX_PAGES}")
                 images = images[:settings.MAX_PAGES]
             
             return images
             
         except Exception as e:
-            logger.error(f"PDF conversion failed: {str(e)}")
+            logger.error(f"Document processing failed: {str(e)}")
             raise

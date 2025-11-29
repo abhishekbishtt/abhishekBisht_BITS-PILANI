@@ -1,47 +1,74 @@
-from typing import List
+from pdf2image import convert_from_bytes
 from PIL import Image
+import aiohttp
+from typing import List
 import logging
 
-from app.utils.file_utils import download_file, detect_file_type
-from app.utils.image_utils import convert_pdf_to_images, load_image_from_bytes
-from app.models.domain import DocumentContext
+from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 
 class DocumentService:
-    """Service for document download and conversion"""
+    """Service for handling document downloads and PDF conversion"""
     
-    @staticmethod
-    async def prepare_document(document_url: str) -> DocumentContext:
+    async def download_document(self, url: str) -> bytes:
         """
-        Download and prepare document for processing
+        Download document from URL.
         
         Args:
-            document_url: URL to the document
+            url: Document URL
             
         Returns:
-            DocumentContext with images ready for processing
+            Document content as bytes
+            
+        Raises:
+            Exception: If download fails
         """
-        # Download file
-        logger.info(f"Downloading document from: {document_url}")
-        file_bytes = await download_file(document_url)
+        try:
+            logger.info(f"Downloading document from: {url}")
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=settings.TIMEOUT_SECONDS) as response:
+                    if response.status != 200:
+                        raise Exception(f"Failed to download: HTTP {response.status}")
+                    
+                    content = await response.read()
+                    logger.info(f"Downloaded {len(content)} bytes")
+                    return content
+                    
+        except Exception as e:
+            logger.error(f"Download failed: {str(e)}")
+            raise
+    
+    def convert_pdf_to_images(self, pdf_bytes: bytes) -> List[Image.Image]:
+        """
+        Convert PDF bytes to list of PIL Images.
         
-        # Detect file type
-        file_type, extension = detect_file_type(file_bytes)
-        logger.info(f"Detected file type: {file_type}{extension}")
-        
-        # Convert to images
-        images: List[Image.Image] = []
-        
-        if file_type == "pdf":
-            images = convert_pdf_to_images(file_bytes)
-        else:  # image
-            images = [load_image_from_bytes(file_bytes)]
-        
-        return DocumentContext(
-            url=document_url,
-            file_type=file_type,
-            total_pages=len(images),
-            images=images
-        )
+        Args:
+            pdf_bytes: PDF file content as bytes
+            
+        Returns:
+            List of PIL Image objects (one per page)
+            
+        Raises:
+            Exception: If conversion fails
+        """
+        try:
+            logger.info("Converting PDF to images...")
+            images = convert_from_bytes(
+                pdf_bytes,
+                dpi=settings.PDF_DPI,
+                fmt='png'
+            )
+            logger.info(f"Converted PDF to {len(images)} pages")
+            
+            if len(images) > settings.MAX_PAGES:
+                logger.warning(f"PDF has {len(images)} pages, limiting to {settings.MAX_PAGES}")
+                images = images[:settings.MAX_PAGES]
+            
+            return images
+            
+        except Exception as e:
+            logger.error(f"PDF conversion failed: {str(e)}")
+            raise

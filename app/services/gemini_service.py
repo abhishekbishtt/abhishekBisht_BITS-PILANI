@@ -16,42 +16,48 @@ class GeminiService:
     """Service for interacting with Google Gemini Vision API"""
     
     def __init__(self):
-        """Initialize Gemini service"""
+        """Initialize Gemini client"""
         self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        self.model = "gemini-2.0-flash-001"
-        logger.info(f"✓ Gemini Service initialized: {self.model}")
     
-    def analyze_page(
-        self, 
-        image: Image.Image, 
-        page_no: int
-    ) -> Dict[str, Any]:
+    async def analyze_page(self, image: Image.Image, page_no: int) -> Dict[str, Any]:
         """
-        Analyze a single page image and extract bill items
+        Analyze a single page image and extract bill data.
+        
+        Args:
+            image: PIL Image of the bill page
+            page_no: Page number
+            
+        Returns:
+            Dictionary with extraction results and token usage
         """
         try:
-            logger.info(f"Analyzing page {page_no}...")
+            # Configure generation
+            config = types.GenerateContentConfig(
+                temperature=settings.GEMINI_TEMPERATURE,
+                response_mime_type="application/json",
+            )
             
-            # Add page number to prompt
-            prompt_with_page = f"{EXTRACTION_PROMPT}\n\nIMPORTANT: This is page {page_no}. Set page_no field to \"{page_no}\" in your response."
+            # Create prompt with page number
+            prompt = f"{EXTRACTION_PROMPT}\n\nThis is page {page_no} of the bill."
             
-            # Generate content
+            # Call Gemini API
             response = self.client.models.generate_content(
-                model=self.model,
-                contents=[prompt_with_page, image],  # CHANGED: use prompt with page number
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    temperature=settings.GEMINI_TEMPERATURE,
-                )
+                model=settings.GEMINI_MODEL,
+                contents=[prompt, image],
+                config=config
             )
             
             # Parse response
             result_json = json.loads(response.text)
             
-            # FORCE CORRECT PAGE NUMBER (override Gemini's response)
-            result_json["page_no"] = str(page_no)  # ADD THIS LINE
+            # Force override page number
+            result_json["page_no"] = str(page_no)
             
-            # Extract token usage
+            # Count items
+            item_count = len(result_json.get("bill_items", []))
+            result_json["item_count"] = item_count
+            
+            # Get token usage
             usage = response.usage_metadata
             token_usage = {
                 "total_tokens": usage.total_token_count,
@@ -59,35 +65,28 @@ class GeminiService:
                 "output_tokens": usage.candidates_token_count
             }
             
-            # Log fraud detection
-            if result_json.get("fraud_suspected", False):
-                logger.warning(f"⚠️ FRAUD SUSPECTED on page {page_no}")
-            
-            items_count = len(result_json.get('bill_items', []))
-            logger.info(
-                f"✓ Page {page_no}: {items_count} items, "
-                f"{token_usage['total_tokens']} tokens"
-            )
+            logger.info(f"✓ Page {page_no}: {item_count} items, {token_usage['total_tokens']} tokens")
             
             return {
+                "success": True,
                 "page_data": result_json,
                 "token_usage": token_usage,
-                "error": None,
                 "page_number": page_no
             }
             
         except json.JSONDecodeError as e:
-            logger.error(f"JSON parsing error on page {page_no}: {e}")
+            logger.error(f"✗ Page {page_no} JSON parse error: {str(e)}")
             return {
+                "success": False,
                 "page_data": None,
                 "token_usage": {"total_tokens": 0, "input_tokens": 0, "output_tokens": 0},
-                "error": f"Invalid JSON response: {str(e)}",
+                "error": f"JSON parse error: {str(e)}",
                 "page_number": page_no
             }
-            
         except Exception as e:
-            logger.error(f"Error analyzing page {page_no}: {str(e)}")
+            logger.error(f"✗ Page {page_no} failed: {str(e)}")
             return {
+                "success": False,
                 "page_data": None,
                 "token_usage": {"total_tokens": 0, "input_tokens": 0, "output_tokens": 0},
                 "error": str(e),

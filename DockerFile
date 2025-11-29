@@ -1,26 +1,23 @@
-# Use Python 3.9 as the base image
-FROM python:3.9
+FROM python:3.9-slim
 
-# 1. Install system dependencies (Poppler is required for pdf2image)
+WORKDIR /app
+
+# Install system dependencies for pdf2image
 RUN apt-get update && apt-get install -y \
     poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
-# Set up a new user named "user" (Recommended for security on HF)
-RUN useradd -m -u 1000 user
-USER user
-ENV HOME=/home/user \
-	PATH=/home/user/.local/bin:$PATH
+# Copy requirements and install
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-WORKDIR $HOME/app
+# Copy application code
+COPY . .
 
-# 2. Copy requirements and install Python dependencies
-COPY --chown=user ./requirements.txt requirements.txt
-RUN pip install --no-cache-dir --upgrade -r requirements.txt
+# Expose port 7860 (Hugging Face standard)
+EXPOSE 7860
 
-# 3. Copy your main.py and other files
-COPY --chown=user . $HOME/app
+# Run the application
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
 
-# 4. Start FastAPI on port 7860 (Hugging Face specific port)
-# Note: We point to 'main:app' because your file is named main.py
-CMD ["uvicorn", "main:app.main", "--host", "0.0.0.0", "--port", "7860"]
+

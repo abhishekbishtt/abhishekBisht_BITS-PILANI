@@ -21,10 +21,10 @@ class Settings(BaseSettings):
     GEMINI_TEMPERATURE: float = 0.1
     
     # Document Processing Settings
-    MAX_FILE_SIZE_MB: int = 50
-    MAX_PAGES: int = 50
+    MAX_FILE_SIZE_MB: int = 500
+    MAX_PAGES: int = 500
     PDF_DPI: int = 300
-    TIMEOUT_SECONDS: int = 60
+    TIMEOUT_SECONDS: int = 120
     
     # Logging
     LOG_LEVEL: str = "INFO"

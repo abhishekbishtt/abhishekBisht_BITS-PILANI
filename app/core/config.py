@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     MAX_PAGES: int = 500
     PDF_DPI: int = 300
     TIMEOUT_SECONDS: int = 300
-    
+    BATCH_SIZE: int = int(os.getenv("BATCH_SIZE", "3")) 
     # Logging
     LOG_LEVEL: str = "INFO"
     

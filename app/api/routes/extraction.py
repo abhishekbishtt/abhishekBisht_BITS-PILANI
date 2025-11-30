@@ -1,4 +1,3 @@
-#bill extraction end point
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
 import logging
@@ -9,10 +8,6 @@ from app.services.extraction_service import ExtractionService
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Initialize service
-extraction_service = ExtractionService()
-
-
 @router.post("/extract-bill-data", response_model=APIResponse)
 async def extract_bill_data(request: DocumentRequest):
     """
@@ -21,9 +16,11 @@ async def extract_bill_data(request: DocumentRequest):
     - **document**: URL to the document (PDF or image)
     """
     try:
+        # Initialize service HERE (inside the request) to fix asyncio loop errors
+        extraction_service = ExtractionService()
+        
         logger.info(f"Processing document: {request.document}")
         result = await extraction_service.extract_from_url(request.document)
-        logger.info(f"Extraction result: {result}")
         
         return result
     except HTTPException as e:

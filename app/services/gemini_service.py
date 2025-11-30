@@ -83,7 +83,7 @@ class GeminiService:
             
             # Parse and sanitize
             result_json = json.loads(response.text)
-            result_json = self.sanitize_response(result_json)  # Fix None values
+            result_json = self.sanitize_response(result_json)
             result_json["page_no"] = str(page_no)
             
             item_count = len(result_json.get("bill_items", []))
@@ -112,7 +112,6 @@ class GeminiService:
                 "page_data": {
                     "page_no": str(page_no),
                     "page_type": "Bill Detail",
-                    "fraud_suspected": False,
                     "bill_items": []
                 },
                 "token_usage": {"total_tokens": 0, "input_tokens": 0, "output_tokens": 0},
@@ -126,10 +125,36 @@ class GeminiService:
                 "page_data": {
                     "page_no": str(page_no),
                     "page_type": "Bill Detail",
-                    "fraud_suspected": False,
                     "bill_items": []
                 },
                 "token_usage": {"total_tokens": 0, "input_tokens": 0, "output_tokens": 0},
                 "error": str(e),
                 "page_number": page_no
             }
+    
+    async def extract_final_total(self, image: Image.Image) -> Dict[str, Any]:
+        """Extract final total amount from last page"""
+        try:
+            prompt = """
+            Extract the FINAL TOTAL or NET PAYABLE amount from this bill.
+            Return ONLY the numeric value as JSON: {"final_total": float}
+            Look for: "Final Total", "Net Payable", "Total Amount", "Grand Total"
+            """
+            
+            config = types.GenerateContentConfig(
+                temperature=0.1,
+                response_mime_type="application/json",
+            )
+            
+            response = await self.client.aio.models.generate_content(
+                model=settings.GEMINI_MODEL,
+                contents=[prompt, image],
+                config=config
+            )
+            
+            result = json.loads(response.text)
+            return result
+            
+        except Exception as e:
+            logger.error(f"Final total extraction failed: {str(e)}")
+            return {"final_total": 0.0}

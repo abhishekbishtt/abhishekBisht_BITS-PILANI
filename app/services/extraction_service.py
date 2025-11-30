@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 from typing import Dict, Any, List
-import backoff
+# import backoff  # Removed unused dependency
 
 from app.services.gemini_service import GeminiService
 from app.services.document_service import DocumentService
@@ -23,7 +23,7 @@ class ExtractionService:
     def gemini_semaphore(self):
         """Lazy property to ensure semaphore is created in the running loop"""
         if self._gemini_semaphore is None:
-            self._gemini_semaphore = asyncio.Semaphore(1)
+            self._gemini_semaphore = asyncio.Semaphore(10)
         return self._gemini_semaphore
     
     async def analyze_page_with_rate_limit(self, *args, **kwargs):
@@ -39,9 +39,8 @@ class ExtractionService:
             images = self.document_service.process_document(content, content_type)
             total_pages = len(images)
             
-            batch_size = int(os.getenv("BATCH_SIZE", "3"))
-            if total_pages > 50:
-                batch_size = 2
+            batch_size = 5
+            
             
             logger.info(f"Processing {total_pages} pages in batches of {batch_size}")
             

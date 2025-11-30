@@ -17,15 +17,15 @@ class Settings(BaseSettings):
     # Gemini Configuration - ADD GOOGLE_API_KEY
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")  # ADD THIS LINE
-    GEMINI_MODEL: str = "gemini-2.5-pro"
-    GEMINI_TEMPERATURE: float = 0.1
+    GEMINI_MODEL: str = "gemini-2.0-flash-exp"
+    GEMINI_TEMPERATURE: float = 0.0
     
     # Document Processing Settings
     MAX_FILE_SIZE_MB: int = 500
     MAX_PAGES: int = 500
-    PDF_DPI: int = 300
+    PDF_DPI: int = 150
     TIMEOUT_SECONDS: int = 300
-    BATCH_SIZE: int = int(os.getenv("BATCH_SIZE", "3")) 
+    BATCH_SIZE: int = 5
     # Logging
     LOG_LEVEL: str = "INFO"
     

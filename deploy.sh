@@ -7,7 +7,7 @@
 PROJECT_ID="medical-bill-extract-v1"          # <-- replace with your actual project ID
 REGION="us-central1"
 SERVICE_NAME="medical-bill-extraction-api"  # keep same as your service
-GEMINI_KEY="AIzaSyDm06BVRuFXK4E__w-UR-b1St57Yk6Gpzc"       # <-- replace with your real Gemini key
+GEMINI_KEY="AIzaSyBiDYGPLyJPxQs4xJR6o-Zn5UKG2CjdxQk"       # <-- replace with your real Gemini key
 
 echo "🚀 Deploying $SERVICE_NAME to Google Cloud Run in project $PROJECT_ID ($REGION)"
 echo ""

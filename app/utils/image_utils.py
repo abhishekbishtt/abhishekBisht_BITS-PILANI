@@ -2,12 +2,12 @@ import io
 import tempfile
 import os
 from typing import List
-from PIL import Image, ImageEnhance
+from PIL import Image
 from pdf2image import convert_from_path
 from fastapi import HTTPException, status
 import logging
-import cv2
-import numpy as np
+# import cv2
+# import numpy as np
 
 
 from app.core.config import get_settings
@@ -19,39 +19,16 @@ settings = get_settings()
 
 
 def preprocess_for_extraction(image: Image.Image) -> Image.Image:
+    """A lightweight no-op preprocessing function.
+
+    The original implementation performed several OpenCV‑based enhancements that
+    significantly increased processing time. For faster response we now simply
+    return the original image unchanged while keeping the function signature for
+    compatibility.
     """
-    Apply medical-bill-specific preprocessing for optimal extraction accuracy
-    
-    Args:
-        image: Raw PIL Image
-        
-    Returns:
-        Enhanced PIL Image
-    """
-    try:
-        # Convert to numpy for OpenCV operations
-        img_array = np.array(image)
-        
-        # 1. Denoise (removes scanner artifacts and compression noise)
-        denoised = cv2.fastNlMeansDenoisingColored(img_array, None, 10, 10, 7, 21)
-        
-        # 2. Convert back to PIL for enhancement
-        pil_img = Image.fromarray(denoised)
-        
-        # 3. Increase contrast (makes text sharper and more defined)
-        enhancer = ImageEnhance.Contrast(pil_img)
-        enhanced = enhancer.enhance(1.5)  # 50% contrast boost
-        
-        # 4. Enhance sharpness (improves character edge definition)
-        sharpener = ImageEnhance.Sharpness(enhanced)
-        sharpened = sharpener.enhance(2.0)  # Double sharpness
-        
-        logger.info(f"✓ Preprocessed image: enhanced contrast & sharpness")
-        return sharpened
-        
-    except Exception as e:
-        logger.warning(f"Preprocessing failed: {str(e)}, returning original")
-        return image  # Return original if preprocessing fails
+    # No heavy processing – just return the image as‑is.
+    logger.info("✓ Skipping heavy image preprocessing for speed optimization")
+    return image
 
 
 
@@ -83,15 +60,9 @@ def convert_pdf_to_images(pdf_bytes: bytes) -> List[Image.Image]:
             fmt='png'
         )
         
-        # Preprocess each image for optimal extraction
-        preprocessed_images = []
-        for idx, img in enumerate(images, 1):
-            processed = preprocess_for_extraction(img)
-            preprocessed_images.append(processed)
-            logger.info(f"✓ Preprocessed page {idx}/{len(images)}")
-        
-        logger.info(f"✓ Converted PDF to {len(preprocessed_images)} preprocessed page(s)")
-        return preprocessed_images
+        # Return raw images without additional preprocessing for speed
+        logger.info(f"✓ Converted PDF to {len(images)} page(s) without extra preprocessing")
+        return images
         
     except Exception as e:
         logger.error(f"Error converting PDF to images: {str(e)}")

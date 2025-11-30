@@ -7,6 +7,7 @@ from app.models.schemas import PageData, TokenUsage, BillItem
 from app.core.constants import PageType
 
 logger = logging.getLogger(__name__)
+# No artificial remote‑call limit – we rely on Cloud Run timeout (30 min) for large PDFs
 
 class ExtractionService:
     """Service for extracting data from medical bills"""
@@ -25,7 +26,7 @@ class ExtractionService:
             logger.info(f"Processing {total_pages} pages SEQUENTIALLY with context")
             
             all_pages = []
-            total_tokens = {"total": 0, "input": 0, "output": 0}
+            total_tokens = {"total_tokens": 0, "input_tokens": 0, "output_tokens": 0}
             previous_items = []
             
             # Sequential processing
@@ -52,9 +53,9 @@ class ExtractionService:
                             previous_items.extend([item.dict() for item in page.bill_items])
                         
                         usage = result["token_usage"]
-                        total_tokens["total"] += usage["total_tokens"]
-                        total_tokens["input"] += usage["input_tokens"]
-                        total_tokens["output"] += usage["output_tokens"]
+                        total_tokens["total_tokens"] += usage["total_tokens"]
+                        total_tokens["input_tokens"] += usage["input_tokens"]
+                        total_tokens["output_tokens"] += usage["output_tokens"]
                         
                         logger.info(f"Page {page_idx}: {len(page.bill_items)} items | Context: {len(previous_items)} total")
                     except Exception as parse_error:

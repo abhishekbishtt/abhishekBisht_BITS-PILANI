@@ -1,9 +1,10 @@
 #!/bin/bash
 
 # Quick Deploy Script for Google Cloud Run
+# No artificial remote‑call limit – we rely on Cloud Run timeout (30 min) for large PDFs
 
 # 1) CONFIGURE THESE
-PROJECT_ID="medical-bill-api-2025"          # <-- replace with your actual project ID
+PROJECT_ID="medical-bill-extract-v1"          # <-- replace with your actual project ID
 REGION="us-central1"
 SERVICE_NAME="medical-bill-extraction-api"  # keep same as your service
 GEMINI_KEY="AIzaSyDm06BVRuFXK4E__w-UR-b1St57Yk6Gpzc"       # <-- replace with your real Gemini key
@@ -29,7 +30,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --set-env-vars GEMINI_API_KEY="$GEMINI_KEY" \
   --memory 2Gi \
   --cpu 2 \
-  --timeout 300 \
+  --timeout 1800 \
   --max-instances 10 \
   --port 8080
 

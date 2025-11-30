@@ -24,3 +24,4 @@ test_*.py
 verify_*.py
 extraction_response.json
 .gemini/
+.env.yaml

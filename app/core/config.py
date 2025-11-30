@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     # Gemini Configuration - ADD GOOGLE_API_KEY
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")  # ADD THIS LINE
-    GEMINI_MODEL: str = "gemini-2.0-flash-001"
+    GEMINI_MODEL: str = "gemini-2.5-pro"
     GEMINI_TEMPERATURE: float = 0.1
     
     # Document Processing Settings

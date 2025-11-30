@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     MAX_FILE_SIZE_MB: int = 500
     MAX_PAGES: int = 500
     PDF_DPI: int = 300
-    TIMEOUT_SECONDS: int = 120
+    TIMEOUT_SECONDS: int = 300
     
     # Logging
     LOG_LEVEL: str = "INFO"

@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field, HttpUrl
-from typing import List, Optional
+from pydantic import BaseModel, Field, HttpUrl, model_validator
+from typing import List, Optional, Union
 from app.core.constants import PageType
 
 class BillItem(BaseModel):
@@ -44,5 +44,41 @@ class ErrorResponse(BaseModel):
 
 
 class DocumentRequest(BaseModel):
-    """Request body for document extraction"""
-    document: str = Field(..., description="URL to the document (PDF or image)")
+    """
+    Request body for document extraction.
+    
+    Supports two modes:
+    - Single document: {"document": "https://example.com/bill.pdf"}
+    - Multiple documents: {"documents": ["url1", "url2", "url3"]}
+    
+    You can provide either 'document' (single) OR 'documents' (multiple), not both.
+    """
+    document: Optional[str] = Field(default=None, description="Single document URL")
+    documents: Optional[List[str]] = Field(default=None, description="List of document URLs for batch processing")
+    
+    @model_validator(mode='after')
+    def validate_document_fields(self):
+        """Ensure exactly one of document or documents is provided"""
+        has_single = self.document is not None
+        has_multiple = self.documents is not None and len(self.documents) > 0
+        
+        if not has_single and not has_multiple:
+            raise ValueError("Must provide either 'document' (single URL) or 'documents' (list of URLs)")
+        
+        if has_single and has_multiple:
+            raise ValueError("Cannot provide both 'document' and 'documents'. Use one or the other.")
+        
+        return self
+    
+    @property
+    def is_batch_request(self) -> bool:
+        """Check if this is a batch (multiple documents) request"""
+        return self.documents is not None and len(self.documents) > 0
+    
+    @property
+    def urls(self) -> List[str]:
+        """Get the list of URLs to process (works for both single and batch)"""
+        if self.is_batch_request:
+            return self.documents
+        return [self.document]
+

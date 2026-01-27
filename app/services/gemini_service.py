@@ -3,103 +3,118 @@ from google.genai import types
 from PIL import Image
 import json
 from typing import Dict, Any, List, Optional
-import logging
 
 from app.core.config import get_settings
 from app.core.constants import EXTRACTION_PROMPT
 
-logger = logging.getLogger(__name__)
 settings = get_settings()
 
+
 class GeminiService:
-    """Context-aware Gemini service for medical bill extraction"""
+    """Gemini service for medical bill extraction - Full document processing"""
     
     def __init__(self):
         """Initialize Gemini service"""
         pass
     
-    def build_context_prompt(self, page_no: int, total_pages: int, previous_items: List[Dict]) -> str:
-        """Build context-aware prompt from previous pages"""
+    def build_full_doc_prompt(self, total_pages: int) -> str:
+        """Build prompt for full document extraction"""
         
         base_prompt = EXTRACTION_PROMPT
-        context = f"\n\n📄 PAGE {page_no} of {total_pages}\n"
-        
-        if previous_items and len(previous_items) > 0:
-            # Safely extract item names
-            prev_names = []
-            for item in previous_items[-10:]:
-                if isinstance(item, dict):
-                    name = item.get('item_name', '')
-                else:
-                    name = getattr(item, 'item_name', '')
-                if name:
-                    prev_names.append(str(name).upper()[:40])
-            
-            if prev_names:
-                context += f"\n🚨 CONTEXT: {len(previous_items)} items seen in previous pages.\n"
-                context += "SKIP duplicates or children of these items:\n"
-                for name in prev_names[:5]:
-                    context += f"  - {name}\n"
-        
+        context = f"""
+
+## DOCUMENT CONTEXT
+
+This document has {total_pages} page(s). You are seeing ALL pages at once.
+
+## CROSS-PAGE DEDUPLICATION
+
+- If the same item appears on multiple pages, extract it ONLY ONCE
+- Use the page with the most complete information
+- Skip duplicate/continued entries on other pages
+
+## OUTPUT FORMAT (MULTI-PAGE)
+
+Return ONE JSON object with ALL pages:
+{{
+  "pages": [
+    {{
+      "page_no": "1",
+      "page_type": "Pharmacy | Bill Detail | Final Bill",
+      "bill_items": [
+        {{
+          "item_name": "string",
+          "item_amount": float,
+          "item_rate": float,
+          "item_quantity": float
+        }}
+      ]
+    }}
+  ]
+}}
+"""
         return base_prompt + context
     
     def sanitize_response(self, data: Dict) -> Dict:
         """Clean Gemini response - replace None with 0.0"""
-        if "bill_items" in data:
-            for item in data["bill_items"]:
-                # Fix None values
-                if item.get("item_amount") is None:
-                    item["item_amount"] = 0.0
-                if item.get("item_rate") is None:
-                    item["item_rate"] = 0.0
-                if item.get("item_quantity") is None:
-                    item["item_quantity"] = 0.0
+        if "pages" in data:
+            for page in data["pages"]:
+                if "bill_items" in page:
+                    for item in page["bill_items"]:
+                        if item.get("item_amount") is None:
+                            item["item_amount"] = 0.0
+                        if item.get("item_rate") is None:
+                            item["item_rate"] = 0.0
+                        if item.get("item_quantity") is None:
+                            item["item_quantity"] = 0.0
         return data
     
-    async def analyze_page(
+    async def analyze_full_document(
         self, 
-        image: Image.Image, 
-        page_no: int,
-        total_pages: int = 1,
-        previous_items: Optional[List[Dict]] = None
+        images: List[Image.Image],
+        total_pages: int
     ) -> Dict[str, Any]:
-        """Analyze single page with context from previous pages"""
-        try:
-            if previous_items is None:
-                previous_items = []
+        """
+        Send ALL pages in ONE call - Gemini handles context & deduplication
+        
+        Args:
+            images: List of PIL Image objects (all pages)
+            total_pages: Total number of pages
             
+        Returns:
+            Dict with success status, pages data, and token usage
+        """
+        try:
             config = types.GenerateContentConfig(
                 temperature=settings.GEMINI_TEMPERATURE,
                 response_mime_type="application/json",
             )
             
-            prompt = self.build_context_prompt(page_no, total_pages, previous_items)
+            prompt = self.build_full_doc_prompt(total_pages)
             
-            logger.info(f"⚡ Starting request for Page {page_no}")
+            # Build contents: [prompt, image1, image2, ...]
+            contents = [prompt] + list(images)
             
-            # Create a fresh client for each request to ensure no concurrency locking
+            # Create client and make request
             client = genai.Client(api_key=settings.GEMINI_API_KEY)
             
             response = await client.aio.models.generate_content(
                 model=settings.GEMINI_MODEL,
-                contents=[prompt, image],
+                contents=contents,
                 config=config
             )
-            logger.info(f"✅ Received response for Page {page_no}")
             
-            # Parse and sanitize
+            # Parse response
             result_json = json.loads(response.text)
             
-            # Handle list response (rare but possible)
+            # Handle if response is a list instead of object with "pages"
             if isinstance(result_json, list):
-                result_json = {"bill_items": result_json}
-                
+                result_json = {"pages": result_json}
+            
+            # Sanitize
             result_json = self.sanitize_response(result_json)
-            result_json["page_no"] = str(page_no)
             
-            item_count = len(result_json.get("bill_items", []))
-            result_json["item_count"] = item_count
-            
+            # Extract token usage
             usage = response.usage_metadata
             token_usage = {
                 "total_tokens": usage.total_token_count,
@@ -107,39 +122,23 @@ class GeminiService:
                 "output_tokens": usage.candidates_token_count
             }
             
-            logger.info(f"✓ Page {page_no}/{total_pages}: {item_count} items, {token_usage['total_tokens']} tokens")
-            
             return {
                 "success": True,
-                "page_data": result_json,
-                "token_usage": token_usage,
-                "page_number": page_no
+                "pages": result_json.get("pages", []),
+                "token_usage": token_usage
             }
             
         except json.JSONDecodeError as e:
-            logger.error(f"✗ Page {page_no} JSON parse error: {str(e)}")
             return {
                 "success": False,
-                "page_data": {
-                    "page_no": str(page_no),
-                    "page_type": "Bill Detail",
-                    "bill_items": []
-                },
+                "pages": [],
                 "token_usage": {"total_tokens": 0, "input_tokens": 0, "output_tokens": 0},
-                "error": f"JSON parse error: {str(e)}",
-                "page_number": page_no
+                "error": f"JSON parse error: {str(e)}"
             }
         except Exception as e:
-            logger.error(f"✗ Page {page_no} failed: {str(e)}")
             return {
                 "success": False,
-                "page_data": {
-                    "page_no": str(page_no),
-                    "page_type": "Bill Detail",
-                    "bill_items": []
-                },
+                "pages": [],
                 "token_usage": {"total_tokens": 0, "input_tokens": 0, "output_tokens": 0},
-                "error": str(e),
-                "page_number": page_no
+                "error": str(e)
             }
-    

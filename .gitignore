@@ -11,3 +11,6 @@ dist/
 build/
 .env.yaml
 .env
+tutorials/
+list_models.py
+*.code-workspace

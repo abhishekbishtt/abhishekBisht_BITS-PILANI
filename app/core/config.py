@@ -14,9 +14,8 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = int(os.getenv("PORT", 7860))
     
-    # Gemini Configuration - ADD GOOGLE_API_KEY
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")  # ADD THIS LINE
+    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
     GEMINI_MODEL: str = "gemini-2.0-flash-exp"
     GEMINI_TEMPERATURE: float = 0.0
     

@@ -1,5 +1,7 @@
-
+from typing import List
 from difflib import SequenceMatcher
+
+from app.models.schemas import PageData
 
 def remove_duplicates_across_pages(pages: List[PageData]) -> List[PageData]:
     """Remove duplicate items using fuzzy matching"""
